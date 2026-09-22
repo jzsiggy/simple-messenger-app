@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { transcribe } from '../api'
 import { useRecorder, type Recording } from '../hooks/useRecorder'
 
@@ -44,14 +44,18 @@ export function Composer({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const { recording, elapsed, start, stop } = useRecorder()
 
+  // Auto-grow: measure after the DOM has the new value (covers typing,
+  // transcript insertion, and remount after the transcribing state).
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  }, [text])
+
   function updateText(value: string) {
     setText(value)
     if (value.trim() === '') setPendingAudio(null)
-    const el = textareaRef.current
-    if (el) {
-      el.style.height = 'auto'
-      el.style.height = `${Math.min(el.scrollHeight, 120)}px`
-    }
   }
 
   async function handleSend() {
@@ -63,8 +67,6 @@ export function Composer({
       if (sent) {
         setText('')
         setPendingAudio(null)
-        const el = textareaRef.current
-        if (el) el.style.height = 'auto'
       }
     } finally {
       setSending(false)
